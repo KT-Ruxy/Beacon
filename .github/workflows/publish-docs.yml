@@ -48,13 +48,23 @@ jobs:
           cp -r build/dokka/html/* ./pushrepo/${{ github.event.repository.name }}/
 
       - name: Commit and push
+        id: commit_and_push
         run: |
           cd pushrepo
           git add .
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            echo "pr_needed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           git commit -m "docs: update for ${{ github.event.repository.name }}"
           git push -f origin docs-${{ github.event.repository.name }}
+          echo "pr_needed=true" >> $GITHUB_OUTPUT
 
       - name: Create PR using GitHub CLI
+        if: steps.commit_and_push.outputs.pr_needed == 'true'
         env:
           GH_TOKEN: ${{ secrets.PAT }}
         run: |

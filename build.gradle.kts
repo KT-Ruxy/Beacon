@@ -9,6 +9,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     kotlin("jvm") version "2.1.0"
     kotlin("plugin.serialization") version "2.1.0"
+    id("com.gradleup.shadow") version "9.2.2"
     id("org.jetbrains.dokka") version "2.0.0"
     `maven-publish`
 }
@@ -30,29 +31,28 @@ dependencies {
     compileOnly("org.slf4j:slf4j-api:2.1.0-alpha1")
 }
 
-java {
-    withSourcesJar()
-}
+java { withSourcesJar() }
 
-kotlin {
-    jvmToolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
+kotlin { jvmToolchain { languageVersion.set(JavaLanguageVersion.of(17)) } }
+
+tasks.withType<JavaCompile>().configureEach { options.release.set(17) }
+
+tasks.withType<KotlinCompile>().configureEach { compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
+
+tasks.shadowJar {
+    archiveClassifier.set("all")
+
+    relocate("io.github.classgraph", "net.ririfa.beacon.libs.classgraph")
+
+    dependencies {
+        exclude(dependency("org.jetbrains.kotlin:.*"))
+        exclude(dependency("org.jetbrains.kotlinx:.*"))
+        exclude(dependency("org.jetbrains:annotations"))
     }
-}
 
-tasks.withType<JavaCompile>().configureEach {
-    options.release.set(17)
-}
-
-tasks.withType<KotlinCompile>().configureEach {
-    compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_17)
-    }
-}
-
-tasks.named<Jar>("jar") {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    archiveClassifier.set("")
+    exclude("META-INF/*.kotlin_module")
+    exclude("META-INF/services/*kotlin*")
+    exclude("META-INF/*kotlin*")
 }
 
 tasks.register<Jar>("javadocJar") {
